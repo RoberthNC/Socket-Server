@@ -1,7 +1,10 @@
 import { UUIDAdapter } from "../../config/uuid.adapter";
 import { Ticket } from "../../domain/interfaces/ticket";
+import { WssService } from "./wss.service";
 
 export class TicketService {
+  constructor(private readonly wssService = WssService.instance) {}
+
   readonly tickets: Ticket[] = [
     { id: UUIDAdapter.v4(), number: 1, createdAt: new Date(), done: false },
     { id: UUIDAdapter.v4(), number: 2, createdAt: new Date(), done: false },
@@ -14,7 +17,7 @@ export class TicketService {
   private readonly workingOnTickets: Ticket[] = [];
 
   public get pendingTickets(): Ticket[] {
-    return this.tickets.filter((ticket) => ticket.handleAtDesk);
+    return this.tickets.filter((ticket) => !ticket.done);
   }
 
   public get lastWorkingOnTickets(): Ticket[] {
@@ -35,7 +38,7 @@ export class TicketService {
       handleAtDesk: undefined,
     };
     this.tickets.push(ticket);
-    //TODO. WS
+    this.onTicketNumberChange();
     return ticket;
   }
 
@@ -62,5 +65,12 @@ export class TicketService {
       return t;
     });
     return { status: "ok" };
+  }
+
+  private onTicketNumberChange() {
+    this.wssService.sendMessage(
+      "on-ticket-count-changed",
+      this.pendingTickets.length
+    );
   }
 }
